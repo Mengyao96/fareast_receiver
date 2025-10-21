@@ -1,48 +1,58 @@
-// 接收端 (Receiver) - 最终版 (适配电机驱动板)
+// 接收端 (Receiver) - 专为TRU Components驱动板优化
 
-// --- 初始化设置 ---
+// --- 电机和舵机引脚定义 ---
+// !! 请根据你的实际接线来确认 !!
+const LIFT_MOTOR_PIN = AnalogPin.P2;   // 假设升力风扇连接到电机B的速度口
+const THRUST_MOTOR_PWM = AnalogPin.P1;   // 推进风扇速度 -> P1
+const THRUST_MOTOR_IN1 = DigitalPin.P8;  // 推进风扇方向 -> P8
+const THRUST_MOTOR_IN2 = DigitalPin.P12; // 推进风扇方向 -> P12
+const STEER_SERVO_PIN = AnalogPin.P4;    // 舵机 -> P4
+
+// --- 初始化 ---
 radio.setGroup(228)
-
-// 关键步骤：根据示范代码，启动电机驱动板的 Standby/Enable 引脚
-pins.digitalWritePin(DigitalPin.P14, 1)
-
-// 初始化舵机和电机
-pins.servoWritePin(AnalogPin.P4, 90)   // 转向舵机居中
-pins.analogWritePin(AnalogPin.P0, 0)  // 升力风扇关闭
-pins.analogWritePin(AnalogPin.P1, 0)  // 推进风扇关闭
-pins.digitalWritePin(DigitalPin.P12, 0) // 推进风扇方向引脚置零
-pins.digitalWritePin(DigitalPin.P13, 0)
+// 启动时，所有电机都关闭
+pins.analogWritePin(LIFT_MOTOR_PIN, 0)
+pins.analogWritePin(THRUST_MOTOR_PWM, 0)
+pins.digitalWritePin(THRUST_MOTOR_IN1, 0)
+pins.digitalWritePin(THRUST_MOTOR_IN2, 0)
+pins.servoWritePin(STEER_SERVO_PIN, 90)
 basic.showIcon(IconNames.Asleep)
 
-// 定义一个函数来控制推进电机（模仿你的示范代码）
+// --- 电机控制函数 ---
+// 控制推进电机
 function controlThrustMotor(speed: number) {
-    // 设置前进方向。如果电机反转，交换下面的 1 和 0
-    pins.digitalWritePin(DigitalPin.P12, 1)
-    pins.digitalWritePin(DigitalPin.P13, 0)
-    // 设置速度 (0-1023)
-    pins.analogWritePin(AnalogPin.P1, speed)
+    // 设置前进方向 (如果反转，交换下面的1和0)
+    pins.digitalWritePin(THRUST_MOTOR_IN1, 1)
+    pins.digitalWritePin(THRUST_MOTOR_IN2, 0)
+    // 设置速度
+    pins.analogWritePin(THRUST_MOTOR_PWM, speed)
 }
 
-// 接收到遥控信号
+// --- 接收无线信号 ---
 radio.onReceivedValue(function (name, value) {
     if (name == "lift") {
+        // 控制升力风扇，value=0为关，value=1为开
         if (value == 1) {
-            pins.analogWritePin(AnalogPin.P0, 800) // 开启升力，800是示例值，可调
+            // 注意：这里我们只控制方向，速度将在下面设定
+            pins.digitalWritePin(DigitalPin.P13, 1)
+            pins.digitalWritePin(DigitalPin.P14, 0)
+            pins.analogWritePin(LIFT_MOTOR_PIN, 800) // 设定一个固定的升力
             basic.showIcon(IconNames.Happy)
         } else {
-            pins.analogWritePin(AnalogPin.P0, 0)
+            pins.analogWritePin(LIFT_MOTOR_PIN, 0) // 直接关闭
             basic.showIcon(IconNames.Asleep)
         }
     } else if (name == "thrust") {
-        // 使用新函数控制推进电机
+        // 控制推进电机
         controlThrustMotor(value)
     } else if (name == "steer") {
-        pins.servoWritePin(AnalogPin.P4, value)
+        // 控制舵机
+        pins.servoWritePin(STEER_SERVO_PIN, value)
     } else if (name == "stop") {
         // 紧急停止
-        pins.analogWritePin(AnalogPin.P0, 0)  // 停止升力
-        controlThrustMotor(0)               // 停止推进
-        pins.servoWritePin(AnalogPin.P4, 90) // 方向回正
+        pins.analogWritePin(LIFT_MOTOR_PIN, 0)
+        controlThrustMotor(0)
+        pins.servoWritePin(STEER_SERVO_PIN, 90)
         basic.showIcon(IconNames.No)
     }
 })
