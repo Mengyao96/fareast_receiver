@@ -7,7 +7,7 @@ radio.setGroup(228)
 pins.digitalWritePin(DigitalPin.P14, 1)
 
 // 初始化舵机和电机
-pins.servoWritePin(AnalogPin.P3, 90)   // 转向舵机居中
+pins.servoWritePin(AnalogPin.P4, 90)   // 转向舵机居中
 pins.analogWritePin(AnalogPin.P0, 0)  // 升力风扇关闭
 pins.analogWritePin(AnalogPin.P1, 0)  // 推进风扇关闭
 pins.digitalWritePin(DigitalPin.P12, 0) // 推进风扇方向引脚置零
@@ -37,12 +37,12 @@ radio.onReceivedValue(function (name, value) {
         // 使用新函数控制推进电机
         controlThrustMotor(value)
     } else if (name == "steer") {
-        pins.servoWritePin(AnalogPin.P3, value)
+        pins.servoWritePin(AnalogPin.P4, value)
     } else if (name == "stop") {
         // 紧急停止
         pins.analogWritePin(AnalogPin.P0, 0)  // 停止升力
         controlThrustMotor(0)               // 停止推进
-        pins.servoWritePin(AnalogPin.P3, 90) // 方向回正
+        pins.servoWritePin(AnalogPin.P4, 90) // 方向回正
         basic.showIcon(IconNames.No)
     }
 })
